@@ -83,7 +83,6 @@ func TestUnmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := Unmarshal(tt.args.data, tt.args.v)
-			t.Logf("err: %v", err)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)

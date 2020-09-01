@@ -22,7 +22,6 @@ func TestMarshal(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Map",
 			args: args{
