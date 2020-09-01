@@ -1,17 +1,19 @@
 package ndjson
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestUnmarshal(t *testing.T) {
 	type user struct {
-		ID  int64  `json:"id"`
-		Bio string `json:"bio"`
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+		Bio  string `json:"bio"`
 	}
-	p := []byte(`{"id":1,"bio":"I am John."}
-{"id":2,"bio":"I am Paul."}
+	data := []byte(`{"id":1,"name":"John Smith","bio":"I am John.\nI like football."}
+{"id":2,"name":"Ashley Madison","bio":"I am Ashley.\nI like baseball."}
 `)
 
 	type args struct {
@@ -25,71 +27,71 @@ func TestUnmarshal(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Interface",
-			args: args{
-				data: p,
-			},
-			want: []interface{}{
-				[]map[string]interface{}{
-					{"id": 1, "bio": "I am a dog."},
-					{"id": 2, "bio": "I am a cat."},
-				},
-			},
-			wantErr: false,
-		},
-		{
 			name: "Map",
 			args: args{
-				data: p,
-				v:    &[]map[string]interface{}{},
+				data: data,
+				v:    new([]map[string]interface{}),
 			},
 			want: &[]map[string]interface{}{
-				{"id": 1, "bio": "I am a dog."},
-				{"id": 2, "bio": "I am a cat."},
+				{"id": float64(1), "name": "John Smith", "bio": "I am John.\nI like football."},
+				{"id": float64(2), "name": "Ashley Madison", "bio": "I am Ashley.\nI like baseball."},
 			},
 			wantErr: false,
 		},
 		{
 			name: "Struct",
 			args: args{
-				data: p,
-				v:    &[]user{},
+				data: data,
+				v:    new([]user),
 			},
 			want: &[]user{
-				{1, "I am a dog."},
-				{2, "I am a cat."},
+				{1, "John Smith", "I am John.\nI like football."},
+				{2, "Ashley Madison", "I am Ashley.\nI like baseball."},
 			},
 			wantErr: false,
 		},
 		{
 			name: "PointerToStruct",
 			args: args{
-				data: p,
-				v:    &[]*user{},
+				data: data,
+				v:    new([]*user),
 			},
 			want: &[]*user{
-				{1, "I am a dog."},
-				{2, "I am a cat."},
+				{1, "John Smith", "I am John.\nI like football."},
+				{2, "Ashley Madison", "I am Ashley.\nI like baseball."},
 			},
+			wantErr: false,
 		},
 		{
-			name: "NotPointerToSlice",
+			name: "NotPointer",
 			args: args{
-				data: p,
+				data: data,
 				v:    []user{},
 			},
 			wantErr: true,
 		},
+		{
+			name: "NotPointerToSlice",
+			args: args{
+				data: data,
+				v:    new(int),
+			},
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.args.v, Unmarshal(tt.args.data, tt.args.v)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Unmarshal() = %v, want %v", got, tt.want)
+			err := Unmarshal(tt.args.data, tt.args.v)
+			t.Logf("err: %v", err)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			} else {
+				if !cmp.Equal(tt.args.v, tt.want) {
+					t.Errorf("Unmarshal() = %v, want %v\ndiff: %s", tt.args.v, &tt.want, cmp.Diff(tt.args.v, tt.want))
+				}
 			}
 		})
 	}
